@@ -20,11 +20,8 @@ type CPU struct {
 	X byte // index register x
 	Y byte // index register y
 
-	// Status represents the Processor Status Register and represents the Carry (C), Zero Result (Z),
-	// Interupt Disable (I), Decimal Mode (D), Break Command (B), Overflow (O), Negative Result (N) flags.
-	// Its represented as a 8-bit register with the following bits:
-	// N | V | | B | D | I | Z | C
-	Status byte
+	// Status flags
+	P Status
 
 	RAM *[]byte
 	ROM *[]byte
