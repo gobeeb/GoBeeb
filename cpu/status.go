@@ -1,20 +1,17 @@
 package cpu
 
-// Status represents the Processor Status Register and represents the Carry (C), Zero Result (Z),
-// Interupt Disable (I), Decimal Mode (D), Break Command (B), Overflow (O), Negative Result (N) flags.
-// Its represented as a 8-bit register with the following bits:
-// N | V | | B | D | I | Z | C
+// Status represents the Processor Status Register
 type Status uint8
 
 const (
-	N Status = 1 << iota
-	V
+	C Status = 1 << iota // Carry
+	Z                    // Zero Result
+	I                    // Interrupt disable
+	D                    // Decimal mode
+	B                    // Break command
 	Unused
-	B
-	D
-	I
-	Z
-	C
+	V // Overflow O?
+	N // Negative Result
 )
 
 func (s Status) Set(flag Status) {
