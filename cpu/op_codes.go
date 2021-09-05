@@ -1,8 +1,16 @@
 package cpu
 
+import "fmt"
+
 var opCodes = map[uint8]Instruction{}
 
 func addIns(i Instruction) {
+	found, ok := opCodes[i.OpCode]
+	if ok {
+		message := fmt.Sprintf("duplicate op code %x used for instructions %s & %s", i.OpCode, i.Symbol, found.Symbol)
+		panic(message)
+	}
+
 	opCodes[i.OpCode] = i
 }
 
@@ -160,7 +168,116 @@ func init() {
 	// LDY
 	addIns(NewInstruction(0xA0, "LDY", "Load Index Y with Memory", Immediate, 2, 2, ldyExecute))
 	addIns(NewInstruction(0xA4, "LDY", "Load Index Y with Memory", ZeroPage, 2, 3, ldyExecute))
-	addIns(NewInstruction(0xB4, "LDY", "Load Index Y with Memory", ZeroPageY, 2, 4, ldyExecute))
+	addIns(NewInstruction(0xB4, "LDY", "Load Index Y with Memory", ZeroPageX, 2, 4, ldyExecute))
 	addIns(NewInstruction(0xAC, "LDY", "Load Index Y with Memory", Absolute, 3, 4, ldyExecute))
-	addIns(NewInstruction(0xBC, "LDY", "Load Index Y with Memory", AbsoluteY, 3, 4, ldyExecute)) //*
+	addIns(NewInstruction(0xBC, "LDY", "Load Index Y with Memory", AbsoluteX, 3, 4, ldyExecute)) //*
+
+	// LSR
+	addIns(NewInstruction(0x4A, "LSR", "Shift One Bit Right", Accumulator, 1, 2, lsrExecute))
+	addIns(NewInstruction(0x46, "LSR", "Shift One Bit Right", ZeroPage, 2, 5, lsrExecute))
+	addIns(NewInstruction(0x56, "LSR", "Shift One Bit Right", ZeroPageX, 2, 6, lsrExecute))
+	addIns(NewInstruction(0x4E, "LSR", "Shift One Bit Right", Absolute, 3, 6, lsrExecute))
+	addIns(NewInstruction(0x5E, "LSR", "Shift One Bit Right", AbsoluteX, 3, 7, lsrExecute))
+
+	// NOP
+	addIns(NewInstruction(0xEA, "NOP", "No Operation", Implied, 1, 2, nopExecute))
+
+	// ORA
+	addIns(NewInstruction(0x09, "ORA", "OR Memory with Accumulator", Immediate, 2, 2, oraExecute))
+	addIns(NewInstruction(0x05, "ORA", "OR Memory with Accumulator", ZeroPage, 2, 3, oraExecute))
+	addIns(NewInstruction(0x15, "ORA", "OR Memory with Accumulator", ZeroPageX, 2, 4, oraExecute))
+	addIns(NewInstruction(0x0D, "ORA", "OR Memory with Accumulator", Absolute, 3, 4, oraExecute))
+	addIns(NewInstruction(0x1D, "ORA", "OR Memory with Accumulator", AbsoluteX, 3, 4, oraExecute)) //*
+	addIns(NewInstruction(0x19, "ORA", "OR Memory with Accumulator", AbsoluteY, 3, 4, oraExecute)) //*
+	addIns(NewInstruction(0x01, "ORA", "OR Memory with Accumulator", IndirectX, 2, 6, oraExecute))
+	addIns(NewInstruction(0x11, "ORA", "OR Memory with Accumulator", IndirectY, 2, 5, oraExecute)) //*
+
+	// PHA
+	addIns(NewInstruction(0x48, "PHA", "Push Accumulator on Stack", Implied, 1, 3, phaExecute))
+
+	// PHP
+	addIns(NewInstruction(0x08, "PHP", "Push Processor Satus on Stack", Implied, 1, 3, phpExecute))
+
+	// PLA
+	addIns(NewInstruction(0x68, "PLA", "Pull Accumulator from Stack", Implied, 1, 4, plaExecute))
+
+	// PLP
+	addIns(NewInstruction(0x28, "PLP", "Pull Processor Status from Stack", Implied, 1, 4, plpExecute))
+
+	// ROL
+	addIns(NewInstruction(0x2A, "ROL", "Rotate One Bit Left", Accumulator, 1, 2, rolExecute))
+	addIns(NewInstruction(0x26, "ROL", "Rotate One Bit Left", ZeroPage, 2, 5, rolExecute))
+	addIns(NewInstruction(0x36, "ROL", "Rotate One Bit Left", ZeroPageX, 2, 6, rolExecute))
+	addIns(NewInstruction(0x2E, "ROL", "Rotate One Bit Left", Absolute, 3, 6, rolExecute))
+	addIns(NewInstruction(0x3E, "ROL", "Rotate One Bit Left", AbsoluteX, 3, 7, rolExecute))
+
+	// ROR
+	addIns(NewInstruction(0x6A, "ROR", "Rotate One Bit Right", Accumulator, 1, 2, rorExecute))
+	addIns(NewInstruction(0x66, "ROR", "Rotate One Bit Right", ZeroPage, 2, 5, rorExecute))
+	addIns(NewInstruction(0x76, "ROR", "Rotate One Bit Right", ZeroPageX, 2, 6, rorExecute))
+	addIns(NewInstruction(0x6E, "ROR", "Rotate One Bit Right", Absolute, 3, 6, rorExecute))
+	addIns(NewInstruction(0x7E, "ROR", "Rotate One Bit Right", AbsoluteX, 3, 7, rorExecute))
+
+	// RTI
+	addIns(NewInstruction(0x40, "RTI", "Return from Interrupt", Implied, 1, 6, rtiExecute))
+
+	// RTS
+	addIns(NewInstruction(0x60, "RTS", "Return from Subroutine", Immediate, 1, 6, rtsExecute))
+
+	// SBC
+	addIns(NewInstruction(0xE9, "SBC", "Subtract Memory from Accum with Borrow", Immediate, 2, 2, sbcExecute))
+	addIns(NewInstruction(0xE5, "SBC", "Subtract Memory from Accum with Borrow", ZeroPage, 2, 3, sbcExecute))
+	addIns(NewInstruction(0xF5, "SBC", "Subtract Memory from Accum with Borrow", ZeroPageX, 2, 4, sbcExecute))
+	addIns(NewInstruction(0xED, "SBC", "Subtract Memory from Accum with Borrow", Absolute, 2, 4, sbcExecute))
+	addIns(NewInstruction(0xFD, "SBC", "Subtract Memory from Accum with Borrow", AbsoluteX, 3, 4, sbcExecute)) //*
+	addIns(NewInstruction(0xF9, "SBC", "Subtract Memory from Accum with Borrow", AbsoluteY, 3, 4, sbcExecute)) //*
+	addIns(NewInstruction(0xE1, "SBC", "Subtract Memory from Accum with Borrow", IndirectX, 2, 6, sbcExecute))
+	addIns(NewInstruction(0xF1, "SBC", "Subtract Memory from Accum with Borrow", IndirectY, 2, 5, sbcExecute)) //*
+
+	// SEC
+	addIns(NewInstruction(0x38, "SEC", "Set Carry Flag", Implied, 1, 2, secExecute))
+
+	// SED
+	addIns(NewInstruction(0xF8, "SED", "Set Decimal Flag", Implied, 1, 2, sedExecute))
+
+	// SEI
+	addIns(NewInstruction(0x7B, "SEI", "Set Interrupt Disable Status", Implied, 1, 2, seiExecute))
+
+	// STA
+	addIns(NewInstruction(0x85, "STA", "Store Accumulator in Memory", ZeroPage, 2, 3, staExecute))
+	addIns(NewInstruction(0x95, "STA", "Store Accumulator in Memory", ZeroPageX, 2, 4, staExecute))
+	addIns(NewInstruction(0x8D, "STA", "Store Accumulator in Memory", Absolute, 3, 4, staExecute))
+	addIns(NewInstruction(0x9D, "STA", "Store Accumulator in Memory", AbsoluteX, 3, 5, staExecute))
+	addIns(NewInstruction(0x99, "STA", "Store Accumulator in Memory", AbsoluteY, 3, 5, staExecute))
+	addIns(NewInstruction(0x81, "STA", "Store Accumulator in Memory", IndirectX, 2, 6, staExecute))
+	addIns(NewInstruction(0x91, "STA", "Store Accumulator in Memory", IndirectY, 2, 6, staExecute))
+
+	// STX
+	addIns(NewInstruction(0x86, "STX", "Store Index X in Memory", ZeroPage, 2, 3, stxExecute))
+	addIns(NewInstruction(0x96, "STX", "Store Index X in Memory", ZeroPageY, 2, 4, stxExecute))
+	addIns(NewInstruction(0x8E, "STX", "Store Index X in Memory", Absolute, 3, 4, stxExecute))
+
+	// STY
+	addIns(NewInstruction(0x84, "STY", "Store Index Y in Memory", ZeroPage, 2, 3, styExecute))
+	addIns(NewInstruction(0x94, "STY", "Store Index Y in Memory", ZeroPageX, 2, 4, styExecute))
+	addIns(NewInstruction(0x8C, "STY", "Store Index Y in Memory", Absolute, 3, 4, styExecute))
+
+	// TAX
+	addIns(NewInstruction(0xAA, "TAX", "Transfer Accumulator to Index X", Implied, 1, 2, taxExecute))
+
+	// TAY
+	addIns(NewInstruction(0xAB, "TAY", "Transfer Accumulator to Index Y", Implied, 1, 2, tayExecute))
+
+	// TSX
+	addIns(NewInstruction(0xBA, "TSX", "Transfer Stack Pointer to Index X", Implied, 1, 2, tsxExecute))
+
+	// TXA
+	addIns(NewInstruction(0x8A, "TXA", "Transfer Index X to Accumulator", Implied, 1, 2, txaExecute))
+
+	// TXS
+	addIns(NewInstruction(0x9A, "TXS", "Transfer Index X to Stack Register", Implied, 1, 2, txsExecute))
+
+	// TYA
+	addIns(NewInstruction(0x9B, "TYA", "Transfer Index Y to Accumulator", Implied, 1, 2, tyaExecute))
+
 }
