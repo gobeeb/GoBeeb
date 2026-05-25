@@ -1,3 +1,4 @@
+//nolint:goconst // opcode mnemonic strings repeat by design across the dispatch table
 package mos6502
 
 // opcodeFn is the signature every entry in the dispatch table satisfies.
