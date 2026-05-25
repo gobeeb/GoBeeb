@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Package mos6502 contract definitions.
 //
 // This file is the public-interface contract for the host-supplied memory /

@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Package mos6502 contract definitions.
 //
 // This file documents the illegal-opcode notification hook contract.

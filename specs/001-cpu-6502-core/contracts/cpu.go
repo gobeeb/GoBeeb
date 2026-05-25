@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Package mos6502 contract definitions.
 //
 // This file documents the public control + state surface of the CPU
