@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        go: ["1.22.x", "1.26.x"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: fmt check
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "Unformatted files:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: vet
+        run: go vet ./...
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.61
+
+      - name: test
+        run: go test -race ./...
+
+      - name: coverage
+        run: |
+          go test -coverprofile=cover.out -covermode=atomic ./mos6502/
+          pct=$(go tool cover -func=cover.out | awk '/^total:/ {gsub("%","",$3); print $3}')
+          echo "Coverage: $pct%"
+          awk -v p="$pct" 'BEGIN { if (p+0 < 80.0) { print "FAIL: coverage", p, "< 80%"; exit 1 } }'
