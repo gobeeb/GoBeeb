@@ -7,7 +7,7 @@ This roadmap captures the phase plan for GoBeeb on the **Go + SDL2 + cimgui-go**
 | Phase | Name                    | Status      | Branch                  |
 |-------|-------------------------|-------------|-------------------------|
 | 001   | 6502 CPU core           | ✅ Complete  | `001-cpu-6502-core`     |
-| 002   | BBC machine layer       | 🟡 Planned  | `002-bbc-machine`       |
+| 002   | BBC machine layer       | ✅ Complete  | `002-bbc-machine`       |
 | 003   | Video ULA + framebuffer | 🟡 Planned  | `003-video-ula`         |
 | 004   | SDL2 host + ImGui debug | 🟡 Planned  | `004-sdl-host`          |
 | 005   | Sound (SN76489)         | ⚪ Backlog   | `005-sound-sn76489`     |
@@ -40,6 +40,8 @@ Legend: ✅ complete · 🟡 planned (spec required next) · ⚪ backlog (not ye
 - OS 1.20 ROM loaded, RESET vector fetched correctly, CPU runs into MOS startup code without crashing on undefined memory.
 - Bus-trace integration test confirms the BBC memory map routes a representative MOS-init instruction stream to the right (stub) peripherals.
 - ≥ 80 % delta coverage on `bbc/` per constitution Principle II.
+
+**Status — complete (2026-05-25)**: 78 deterministic tests pass on `bbc/`; 97.2 % coverage; `BenchmarkTickNoop` ~5.4 ns/cycle and `BenchmarkTickMixedWorkload` ~5.3 ns/cycle on amd64 (both 0 B/op, 0 allocs/op — comfortably under the ≤ ~6.5 ns/cycle SC-006 budget). Golden bus traces locked for reset, CRTC index/data, VIA round-trip, ROM-select swap. OS 1.20 smoke test gated on `BBC_OS_ROM` (not redistributed). Deferred items handed off to later phases: real CRTC scanline timing (Phase 003), VIA timers / interrupts (Phase 005/007 when peripherals come online), real 1770 FDC behaviour (Phase 007). See [specs/002-bbc-machine/](../specs/002-bbc-machine/).
 
 ---
 

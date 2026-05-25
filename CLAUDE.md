@@ -2,15 +2,15 @@
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
 
-- Current feature: 6502 CPU Core (branch `001-cpu-6502-core`)
-- Plan: [specs/001-cpu-6502-core/plan.md](specs/001-cpu-6502-core/plan.md)
-- Spec: [specs/001-cpu-6502-core/spec.md](specs/001-cpu-6502-core/spec.md)
-- Research / decisions: [specs/001-cpu-6502-core/research.md](specs/001-cpu-6502-core/research.md)
-- Data model: [specs/001-cpu-6502-core/data-model.md](specs/001-cpu-6502-core/data-model.md)
-- API contracts (Go): [specs/001-cpu-6502-core/contracts/](specs/001-cpu-6502-core/contracts/)
-- Quickstart: [specs/001-cpu-6502-core/quickstart.md](specs/001-cpu-6502-core/quickstart.md)
+- Current feature: BBC Machine Layer (branch `002-bbc-machine`)
+- Plan: [specs/002-bbc-machine/plan.md](specs/002-bbc-machine/plan.md)
+- Spec: [specs/002-bbc-machine/spec.md](specs/002-bbc-machine/spec.md)
+- Research / decisions: [specs/002-bbc-machine/research.md](specs/002-bbc-machine/research.md)
+- Data model: [specs/002-bbc-machine/data-model.md](specs/002-bbc-machine/data-model.md)
+- API contracts (Go): [specs/002-bbc-machine/contracts/](specs/002-bbc-machine/contracts/)
+- Quickstart: [specs/002-bbc-machine/quickstart.md](specs/002-bbc-machine/quickstart.md)
 
-Language: Go 1.22+. Module: `github.com/gobeeb/GoBeeb`. Target package: `mos6502/`.
+Language: Go 1.22+. Module: `github.com/gobeeb/GoBeeb`. Target package: `bbc/` (consumes `mos6502/` verbatim).
 <!-- SPECKIT END -->
 
 ## Implemented packages
@@ -40,3 +40,32 @@ Known v1 limitations:
 - `StepCycle()` runs one whole instruction (true per-cycle scheduling deferred).
 
 Make targets: `make fmt vet lint test bench cover`.
+
+### `bbc/` — BBC Model B machine layer
+
+Public API:
+
+- `bbc.New() *Machine` — construct a Machine with no ROMs loaded.
+- `Machine.LoadOSROM([]byte) error` / `Machine.LoadSidewaysROM(bank int, []byte) error` — copy-on-load ROM installers.
+- `Machine.Tick(cycles uint64) uint64` — drive the CPU forward, returns cumulative cycle count.
+- `Machine.Reset() error` / `Machine.ColdReset() error` — soft (BREAK-key) vs power-on resets.
+- `Machine.AssertIRQ(level bool)` / `AssertNMI()` / `DeassertNMI()` / `SetRDY(ready bool)` — control pass-throughs.
+- `Machine.CPU() *mos6502.CPU` — debug access (Trace, Registers, Disassemble, IllegalOpcodeHook).
+- `Machine.SetUnmappedAccessHook(UnmappedAccessHook)` — observability for FRED/JIM/SHEILA + empty-bank reads.
+- `Machine.Snapshot() Snapshot` / `Machine.Restore(Snapshot) error` — in-process round-trip of CPU + RAM + peripherals.
+- `Peripheral` interface, `MemoryMap` (implements `mos6502.Memory`), per-stub snapshot types.
+- Errors: `ErrNoOSROM`, `ErrInvalidROMSize`, `ErrBankOutOfRange`, `ErrRestoreMismatch`.
+
+Validation status:
+- 78 unit tests covering OS-ROM/sideways loaders, Reset vs ColdReset, RAM round-trip, SHEILA decoder routing for every address range in FR-008, CRTC index-then-data semantics, System/User VIA round-trip + 16-byte mirroring, FRED/JIM unmapped behaviour, sideways paging across 4 banks with empty-bank open-bus, Snapshot/Restore byte-identical round-trip after 100k+ cycles, UnmappedAccessHook semantics, FR-028 no-locks reflection guard.
+- Golden bus traces: `reset_first256.trace`, `crtc_index_then_data.trace`, `via_register_round_trip.trace`, `rom_select_swap.trace`.
+- OS 1.20 smoke test: gated on `BBC_OS_ROM` env var (not redistributed); when set, asserts ≥ 1 000 000 cycles run without firing the illegal-opcode or unmapped-access hooks.
+- Coverage: 97.2% on `bbc/` (gate: ≥ 80%).
+- Benchmarks: `BenchmarkTickNoop` ~5.4 ns/cycle, `BenchmarkTickMixedWorkload` ~5.3 ns/cycle on amd64; 0 B/op, 0 allocs/op (gate: ≤ ~6.5 ns/cycle).
+
+Known v1 limitations:
+- Stub peripherals implement register-file storage only — no CRTC scanline timing, no VIA timers/shift registers/interrupt flags, no real ACIA/FDC/ADC/Tube/Econet behaviour. Real semantics are owned by later phases.
+- ACCCON ($FE34–$FE37) is a Model B no-op (always returns $FF on read); Master 128 semantics are deferred.
+- No save-state file format — `Snapshot`/`Restore` round-trip is in-process Go values only.
+- No interrupts sourced from peripherals (FR-021). The IRQ/NMI control surface is wired but never pulled by Phase 002 code.
+- Single-goroutine contract carries forward from `mos6502.CPU` — no internal locking on `Tick`.
