@@ -4,15 +4,16 @@ This roadmap captures the phase plan for GoBeeb on the **Go + SDL2 + cimgui-go**
 
 ## Phase status
 
-| Phase | Name                    | Status      | Branch                  |
-|-------|-------------------------|-------------|-------------------------|
-| 001   | 6502 CPU core           | ✅ Complete  | `001-cpu-6502-core`     |
-| 002   | BBC machine layer       | ✅ Complete  | `002-bbc-machine`       |
-| 003   | Video ULA + framebuffer | 🟡 Planned  | `003-video-ula`         |
-| 004   | SDL2 host + ImGui debug | 🟡 Planned  | `004-sdl-host`          |
-| 005   | Sound (SN76489)         | ⚪ Backlog   | `005-sound-sn76489`     |
-| 006   | Keyboard / joystick     | ⚪ Backlog   | `006-input`             |
-| 007   | Disc (1770 FDC) + tape  | ⚪ Backlog   | `007-storage`           |
+| Phase | Name                                 | Status      | Branch                       |
+|-------|--------------------------------------|-------------|------------------------------|
+| 001   | 6502 CPU core                        | ✅ Complete  | `001-cpu-6502-core`          |
+| 002   | BBC machine layer                    | ✅ Complete  | `002-bbc-machine`            |
+| 003   | CPU bus-cycle validation (Tom Harte) | 🟡 Planned  | `003-cpu-processor-tests`    |
+| 004   | Video ULA + framebuffer              | 🟡 Planned  | `004-video-ula`              |
+| 005   | SDL2 host + ImGui debug              | 🟡 Planned  | `005-sdl-host`               |
+| 006   | Sound (SN76489)                      | ⚪ Backlog   | `006-sound-sn76489`          |
+| 007   | Keyboard / joystick                  | ⚪ Backlog   | `007-input`                  |
+| 008   | Disc (1770 FDC) + tape               | ⚪ Backlog   | `008-storage`                |
 
 Legend: ✅ complete · 🟡 planned (spec required next) · ⚪ backlog (not yet specified).
 
@@ -45,7 +46,48 @@ Legend: ✅ complete · 🟡 planned (spec required next) · ⚪ backlog (not ye
 
 ---
 
-## Phase 003 — Video ULA + framebuffer (`video/`)
+## Phase 003 — CPU bus-cycle validation (Tom Harte ProcessorTests)
+
+**Goal**: validate cycle-accurate bus behaviour of every documented NMOS 6502 opcode against the [SingleStepTests/ProcessorTests](https://github.com/SingleStepTests/ProcessorTests) corpus — 10,000 JSON cases per opcode, ~1.51M tests across the 151 documented opcodes. Closes the validation gap left by the Klaus Dormann ROM, which only checks final state and cannot see per-cycle read/write order.
+
+**Scope**:
+
+- New test file `mos6502/processortests_test.go` consuming the upstream JSON corpus.
+- `go:generate` directive (e.g. on a new `mos6502/gen.go`) that fetches `SingleStepTests/ProcessorTests` subdir `6502/v1/*.json` into `mos6502/testdata/processortests/` at a pinned commit SHA. Directory is gitignored; fetch script is idempotent.
+- Sparse-memory test adapter (`map[uint16]uint8` implementing `mos6502.Memory`) populated from each JSON case's `initial.ram` entries.
+- Per-test flow per JSON case:
+  1. Parse `{name, initial: {pc, s, a, x, y, p, ram}, final: {...}, cycles: [[addr, value, "read"|"write"]]}`.
+  2. Construct CPU on sparse memory; `SetRegisters(initial)`; populate RAM; attach `Trace`.
+  3. `cpu.Step()` once.
+  4. Assert `Registers()` == `final`; assert RAM mutations == `final.ram`; assert `Trace.Snapshot()` matches `cycles` exactly (cycle count + each `{addr, value, kind}`).
+- One Go subtest per opcode (`t.Run("0xA9_LDA_imm", ...)`) with `t.Parallel()`; sampled subset under `testing.Short()`.
+- Skip list covers the 105 illegal NMOS opcodes (constant in test file) — deferred to a future phase.
+- Pin upstream commit SHA in test source for reproducibility.
+
+**Reuses** (zero new public API on `mos6502`):
+
+- `mos6502.Trace` / `BusEvent` / `Trace.Snapshot()` — already records every bus cycle.
+- `mos6502.CPU.Registers()` / `SetRegisters()` — state setup + assert.
+- `mos6502.Memory` interface — sparse-map adapter is trivial.
+- Klaus Dormann `functional_test.go` pattern for harness shape (corpus itself is fetched, not embedded).
+
+**Exit criteria**:
+
+- All 151 documented opcodes pass 10,000 cases each (~1.51M passing tests).
+- Pre-existing tests (functional ROM, golden traces, unit tests) still pass; coverage on `mos6502/` does not regress below current 99.3 %.
+- `go generate ./mos6502/` reproducibly fetches the pinned corpus; documented in `mos6502/` quickstart or README.
+- `go test -short ./mos6502/` runs a representative sampled subset in CI-acceptable time; full corpus runs under a non-short tag or build flag.
+- Pinned `SingleStepTests/ProcessorTests` commit SHA recorded in test source.
+
+**Out of scope** (tracked as follow-ups, not in this phase):
+
+- Implementing the 105 undocumented NMOS opcodes (LAX, SAX, DCP, ISB, RLA, RRA, SLO, SRE, ANC, ARR, ASR, LAS, XAA, AHX, SHX, SHY, TAS, KIL). Current stub treats them as 2-cycle NOP and would fail Tom Harte expectations — explicitly skipped here.
+- 65C02 / 65816 variants.
+- Reset / IRQ / NMI sequences (not part of this corpus; covered by existing `interrupts_test.go`).
+
+---
+
+## Phase 004 — Video ULA + framebuffer (`video/`)
 
 **Goal**: produce a `[]uint8` 8-bit-indexed framebuffer matching what a real BBC Model B would render for MODE 0–7 from a representative MOS init. **Still no SDL.**
 
@@ -68,9 +110,9 @@ Legend: ✅ complete · 🟡 planned (spec required next) · ⚪ backlog (not ye
 
 ---
 
-## Phase 004 — SDL2 host + ImGui debugger (`host/sdl/`)
+## Phase 005 — SDL2 host + ImGui debugger (`host/sdl/`)
 
-**Goal**: first time a user sees pixels on screen. SDL2 window blitting the Phase 003 framebuffer, audio callback wired up for Phase 005, ImGui overlay showing CPU/memory state.
+**Goal**: first time a user sees pixels on screen. SDL2 window blitting the Phase 004 framebuffer, audio callback wired up for Phase 006, ImGui overlay showing CPU/memory state.
 
 **Scope**:
 
@@ -78,13 +120,13 @@ Legend: ✅ complete · 🟡 planned (spec required next) · ⚪ backlog (not ye
 - Bindings: `github.com/AllenDang/cimgui-go` (uses cgo) + cimgui-go's bundled `backend/sdlbackend` (SDL2 + OpenGL).
 - Window: 1280×1024 (2× the BBC's 640×512), resizable, integer scaling.
 - Render loop: 50 Hz emulator step → framebuffer → SDL_Texture upload → ImGui draw → swap.
-- Audio: SDL2 audio callback pulls from a preallocated lock-free ring buffer. **No allocations in the audio callback.** Audio goroutine pinned via `runtime.LockOSThread`. (Audio source itself lands in Phase 005; Phase 004 wires the callback with a silent stub.)
+- Audio: SDL2 audio callback pulls from a preallocated lock-free ring buffer. **No allocations in the audio callback.** Audio goroutine pinned via `runtime.LockOSThread`. (Audio source itself lands in Phase 006; Phase 005 wires the callback with a silent stub.)
 - ImGui overlay (toggle via F12):
   - CPU register window (live `A`, `X`, `Y`, `SP`, `PC`, `P` flags).
   - Disassembly window using `mos6502.Disassemble` from the current `PC`.
   - Memory hex view (1 KB pages, jump-to-address).
   - Cycle counter + emulated MHz.
-- Input: SDL keyboard events → BBC keyboard matrix stub (real mapping is Phase 006).
+- Input: SDL keyboard events → BBC keyboard matrix stub (real mapping is Phase 007).
 
 **Reuses**: `mos6502.Disassemble`, `mos6502.CPU.Registers`, `bbc.Machine.Tick`, `video.Renderer.Frame`.
 
@@ -102,15 +144,15 @@ Legend: ✅ complete · 🟡 planned (spec required next) · ⚪ backlog (not ye
 - F12 toggles overlay; reg/disasm/memory views all live.
 - Clean shutdown on window close.
 
-**ADR re-evaluation gate**: completion of Phase 004 is the explicit point to re-read ADR-0001 and decide whether the SDL2 + cgo + GC stack is meeting the verification criteria. After Phase 004 the cost of reversing the language decision rises sharply.
+**ADR re-evaluation gate**: completion of Phase 005 is the explicit point to re-read ADR-0001 and decide whether the SDL2 + cgo + GC stack is meeting the verification criteria. After Phase 005 the cost of reversing the language decision rises sharply.
 
 ---
 
-## Phase 005+ — backlog (out of scope for this roadmap pass)
+## Phase 006+ — backlog (out of scope for this roadmap pass)
 
-- **Phase 005 — Sound**: SN76489 emulation + audio source for the Phase 004 ring buffer.
-- **Phase 006 — Input**: full BBC keyboard matrix, optional joystick.
-- **Phase 007 — Storage**: 1770 FDC for SSD/DSD discs, UEF tape loader.
+- **Phase 006 — Sound**: SN76489 emulation + audio source for the Phase 005 ring buffer.
+- **Phase 007 — Input**: full BBC keyboard matrix, optional joystick.
+- **Phase 008 — Storage**: 1770 FDC for SSD/DSD discs, UEF tape loader.
 
 These will get their own spec / plan / tasks via the standard spec-kit flow (`/speckit-specify` → `/speckit-plan` → `/speckit-tasks`) before promotion to "planned".
 
