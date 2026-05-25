@@ -18,65 +18,71 @@ func Disassemble(mem Memory, pc uint16) (text string, length int) {
 	var b strings.Builder
 	b.Grow(16)
 	b.WriteString(meta.Mnemonic)
+	appendOperand(&b, mem, pc, meta.Mode)
 
-	switch meta.Mode {
+	return b.String(), int(meta.Length)
+}
+
+func appendOperand(b *strings.Builder, mem Memory, pc uint16, mode AddressingMode) {
+	switch mode {
 	case ModeImplicit:
-		// no operand
+		return
 	case ModeAccumulator:
 		b.WriteString(" A")
 	case ModeImmediate:
 		b.WriteString(" #$")
-		appendHex2(&b, mem.Read(pc+1))
-	case ModeZeroPage:
+		appendHex2(b, mem.Read(pc+1))
+	case ModeZeroPage, ModeZeroPageX, ModeZeroPageY:
 		b.WriteString(" $")
-		appendHex2(&b, mem.Read(pc+1))
-	case ModeZeroPageX:
-		b.WriteString(" $")
-		appendHex2(&b, mem.Read(pc+1))
-		b.WriteString(",X")
-	case ModeZeroPageY:
-		b.WriteString(" $")
-		appendHex2(&b, mem.Read(pc+1))
-		b.WriteString(",Y")
+		appendHex2(b, mem.Read(pc+1))
+		b.WriteString(zpSuffix(mode))
 	case ModeRelative:
 		offset := int8(mem.Read(pc + 1))
 		dest := uint16(int32(pc) + 2 + int32(offset))
 		b.WriteString(" $")
-		appendHex4(&b, dest)
-	case ModeAbsolute:
-		lo := mem.Read(pc + 1)
-		hi := mem.Read(pc + 2)
-		b.WriteString(" $")
-		appendHex4(&b, uint16(lo)|uint16(hi)<<8)
-	case ModeAbsoluteX:
-		lo := mem.Read(pc + 1)
-		hi := mem.Read(pc + 2)
-		b.WriteString(" $")
-		appendHex4(&b, uint16(lo)|uint16(hi)<<8)
-		b.WriteString(",X")
-	case ModeAbsoluteY:
-		lo := mem.Read(pc + 1)
-		hi := mem.Read(pc + 2)
-		b.WriteString(" $")
-		appendHex4(&b, uint16(lo)|uint16(hi)<<8)
-		b.WriteString(",Y")
-	case ModeIndirect:
-		lo := mem.Read(pc + 1)
-		hi := mem.Read(pc + 2)
-		b.WriteString(" ($")
-		appendHex4(&b, uint16(lo)|uint16(hi)<<8)
-		b.WriteByte(')')
+		appendHex4(b, dest)
+	case ModeAbsolute, ModeAbsoluteX, ModeAbsoluteY, ModeIndirect:
+		b.WriteString(absPrefix(mode))
+		appendHex4(b, uint16(mem.Read(pc+1))|uint16(mem.Read(pc+2))<<8)
+		b.WriteString(absSuffix(mode))
 	case ModeIndexedIndirect:
 		b.WriteString(" ($")
-		appendHex2(&b, mem.Read(pc+1))
+		appendHex2(b, mem.Read(pc+1))
 		b.WriteString(",X)")
 	case ModeIndirectIndexed:
 		b.WriteString(" ($")
-		appendHex2(&b, mem.Read(pc+1))
+		appendHex2(b, mem.Read(pc+1))
 		b.WriteString("),Y")
 	}
+}
 
-	return b.String(), int(meta.Length)
+func zpSuffix(mode AddressingMode) string {
+	switch mode {
+	case ModeZeroPageX:
+		return ",X"
+	case ModeZeroPageY:
+		return ",Y"
+	}
+	return ""
+}
+
+func absPrefix(mode AddressingMode) string {
+	if mode == ModeIndirect {
+		return " ($"
+	}
+	return " $"
+}
+
+func absSuffix(mode AddressingMode) string {
+	switch mode {
+	case ModeAbsoluteX:
+		return ",X"
+	case ModeAbsoluteY:
+		return ",Y"
+	case ModeIndirect:
+		return ")"
+	}
+	return ""
 }
 
 func appendHex2(b *strings.Builder, v uint8) {

@@ -45,7 +45,7 @@ func TestGoldenTraces(t *testing.T) {
 		{
 			name:    "lda_abs",
 			program: []byte{0xAD, 0x34, 0x12},
-			setup: func(c *CPU, ram *flatRAM) {
+			setup: func(_ *CPU, ram *flatRAM) {
 				ram[0x1234] = 0x77
 			},
 			want: `1: R $0600 = $AD
@@ -86,7 +86,7 @@ func TestGoldenTraces(t *testing.T) {
 		{
 			name:    "sta_abs_x_always_penalty",
 			program: []byte{0x9D, 0x10, 0x12},
-			setup: func(c *CPU, ram *flatRAM) {
+			setup: func(c *CPU, _ *flatRAM) {
 				c.A = 0xAA
 				c.X = 0x05
 			},
@@ -101,7 +101,7 @@ func TestGoldenTraces(t *testing.T) {
 		{
 			name:    "jmp_indirect_normal",
 			program: []byte{0x6C, 0x34, 0x12},
-			setup: func(c *CPU, ram *flatRAM) {
+			setup: func(_ *CPU, ram *flatRAM) {
 				ram[0x1234] = 0x00
 				ram[0x1235] = 0x08
 			},
@@ -115,7 +115,7 @@ func TestGoldenTraces(t *testing.T) {
 		{
 			name:    "jmp_indirect_pagebug",
 			program: []byte{0x6C, 0xFF, 0x10},
-			setup: func(c *CPU, ram *flatRAM) {
+			setup: func(_ *CPU, ram *flatRAM) {
 				ram[0x10FF] = 0x34 // target low
 				ram[0x1000] = 0x12 // NMOS bug: high read from $1000, not $1100
 			},
@@ -129,7 +129,7 @@ func TestGoldenTraces(t *testing.T) {
 		{
 			name:    "inc_abs_rmw_double_write",
 			program: []byte{0xEE, 0x34, 0x12},
-			setup: func(c *CPU, ram *flatRAM) {
+			setup: func(_ *CPU, ram *flatRAM) {
 				ram[0x1234] = 0x41
 			},
 			want: `1: R $0600 = $EE
@@ -143,7 +143,7 @@ func TestGoldenTraces(t *testing.T) {
 		{
 			name:    "asl_accumulator_no_memory_cycles",
 			program: []byte{0x0A},
-			setup: func(c *CPU, ram *flatRAM) {
+			setup: func(c *CPU, _ *flatRAM) {
 				c.A = 0x42
 			},
 			// 2 cycles total: opcode fetch + dummy fetch at PC.
@@ -154,7 +154,7 @@ func TestGoldenTraces(t *testing.T) {
 		{
 			name:    "brk_normal",
 			program: []byte{0x00, 0x00},
-			setup: func(c *CPU, ram *flatRAM) {
+			setup: func(_ *CPU, ram *flatRAM) {
 				ram[0xFFFE] = 0x00
 				ram[0xFFFF] = 0x80
 			},

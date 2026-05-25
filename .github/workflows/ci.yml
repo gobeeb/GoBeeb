@@ -8,15 +8,14 @@ on:
 
 jobs:
   test:
-    strategy:
-      matrix:
-        go: ["1.22.x", "1.26.x"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+
+      - uses: jdx/mise-action@v2
         with:
-          go-version: ${{ matrix.go }}
+          install: true
+          cache: true
 
       - name: fmt check
         run: |
@@ -31,9 +30,7 @@ jobs:
         run: go vet ./...
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.61
+        run: golangci-lint run
 
       - name: test
         run: go test -race ./...
