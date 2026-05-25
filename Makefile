@@ -17,7 +17,7 @@ test:
 	$(GO) test -race $(PKGS)
 
 bench:
-	$(GO) test -bench=. -benchmem -benchtime=5s ./mos6502/
+	$(GO) test -bench=. -benchmem -benchtime=5s ./mos6502/ ./bbc/
 
 cover:
 	$(GO) test -coverprofile=$(COVER_OUT) -covermode=atomic $(PKGS)
