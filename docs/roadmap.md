@@ -8,7 +8,7 @@ This roadmap captures the phase plan for GoBeeb on the **Go + SDL2 + cimgui-go**
 |-------|--------------------------------------|-------------|------------------------------|
 | 001   | 6502 CPU core                        | ✅ Complete  | `001-cpu-6502-core`          |
 | 002   | BBC machine layer                    | ✅ Complete  | `002-bbc-machine`            |
-| 003   | CPU bus-cycle validation (Tom Harte) | 🟡 Planned  | `003-cpu-processor-tests`    |
+| 003   | CPU bus-cycle validation (Tom Harte) | ✅ Complete  | `003-cpu-processor-tests`    |
 | 004   | Video ULA + framebuffer              | 🟡 Planned  | `004-video-ula`              |
 | 005   | SDL2 host + ImGui debug              | 🟡 Planned  | `005-sdl-host`               |
 | 006   | Sound (SN76489)                      | ⚪ Backlog   | `006-sound-sn76489`          |
@@ -84,6 +84,8 @@ Legend: ✅ complete · 🟡 planned (spec required next) · ⚪ backlog (not ye
 - Implementing the 105 undocumented NMOS opcodes (LAX, SAX, DCP, ISB, RLA, RRA, SLO, SRE, ANC, ARR, ASR, LAS, XAA, AHX, SHX, SHY, TAS, KIL). Current stub treats them as 2-cycle NOP and would fail Tom Harte expectations — explicitly skipped here.
 - 65C02 / 65816 variants.
 - Reset / IRQ / NMI sequences (not part of this corpus; covered by existing `interrupts_test.go`).
+
+**Status — complete (2026-05-26)**: 151 documented NMOS opcodes pass 10,000 cases each against `SingleStepTests/ProcessorTests` pinned at SHA `bb117564…` (10K × 151 ≈ 1.51M assertions). 105 undocumented opcodes reported as SKIP via auditable `skipList`. Full corpus run: ~4 s wall-time on amd64 (SC-008 budget ≤ 5 min). Short mode (`-short`, 100 cases/opcode): ~4 s. `mos6502/` coverage holds at 99.3 %. Bench `BenchmarkRunMixedWorkload` ~4.4 ns/cycle (within margin of pre-phase 4.24 ns/cycle baseline; 0 allocs). Zero new public API, zero new runtime deps. See [specs/003-cpu-processor-tests/](../specs/003-cpu-processor-tests/).
 
 ---
 
