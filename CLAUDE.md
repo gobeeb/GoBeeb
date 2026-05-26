@@ -2,15 +2,15 @@
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
 
-- Current feature: BBC Machine Layer (branch `002-bbc-machine`)
-- Plan: [specs/002-bbc-machine/plan.md](specs/002-bbc-machine/plan.md)
-- Spec: [specs/002-bbc-machine/spec.md](specs/002-bbc-machine/spec.md)
-- Research / decisions: [specs/002-bbc-machine/research.md](specs/002-bbc-machine/research.md)
-- Data model: [specs/002-bbc-machine/data-model.md](specs/002-bbc-machine/data-model.md)
-- API contracts (Go): [specs/002-bbc-machine/contracts/](specs/002-bbc-machine/contracts/)
-- Quickstart: [specs/002-bbc-machine/quickstart.md](specs/002-bbc-machine/quickstart.md)
+- Current feature: CPU Bus-Cycle Validation — Tom Harte ProcessorTests (branch `003-cpu-processor-tests`)
+- Plan: [specs/003-cpu-processor-tests/plan.md](specs/003-cpu-processor-tests/plan.md)
+- Spec: [specs/003-cpu-processor-tests/spec.md](specs/003-cpu-processor-tests/spec.md)
+- Research / decisions: [specs/003-cpu-processor-tests/research.md](specs/003-cpu-processor-tests/research.md)
+- Data model: [specs/003-cpu-processor-tests/data-model.md](specs/003-cpu-processor-tests/data-model.md)
+- Contracts: [specs/003-cpu-processor-tests/contracts/](specs/003-cpu-processor-tests/contracts/)
+- Quickstart: [specs/003-cpu-processor-tests/quickstart.md](specs/003-cpu-processor-tests/quickstart.md)
 
-Language: Go 1.22+. Module: `github.com/gobeeb/GoBeeb`. Target package: `bbc/` (consumes `mos6502/` verbatim).
+Language: Go 1.22+. Module: `github.com/gobeeb/GoBeeb`. Target package: `mos6502/` (test-only additions; no new public API). Phase 002 (`bbc/`) artifacts at [specs/002-bbc-machine/](specs/002-bbc-machine/) remain canonical for that layer.
 <!-- SPECKIT END -->
 
 ## Implemented packages
@@ -29,6 +29,7 @@ Public API:
 
 Validation status:
 - Klaus Dormann `6502_functional_test` ROM: **PASS** (exercises every documented opcode + BCD).
+- Tom Harte SingleStepTests/ProcessorTests corpus (Phase 003): **PASS** for all 151 documented NMOS opcodes (10,000 cases each ≈ 1.51M assertions); 105 undocumented opcodes reported as SKIP via the `skipList` contract. Pinned upstream SHA `bb11756436da8fd16cce86aef63dc6725f48836f`. `-short` mode samples 100 cases per opcode (~15,100 total) for the CI inner loop; full corpus run completes in ~4 s on amd64 (SC-008 budget ≤ 5 min). Corpus is gitignored; fetched on demand via `go generate ./mos6502/`.
 - 91 unit tests covering addressing modes, RMW double-write trace, BCD edges, stack wrap, interrupts (RESET/IRQ/NMI/BRK/RTI), NMI hijack, illegal opcode hook, RDY gating, golden bus traces.
 - Coverage: 99.3% on `mos6502/` (gate: ≥80%).
 - Benchmarks: ~4.3 ns/cycle on amd64, 0 B/op, 0 allocs/op (gate: ≤125 ns/cycle).

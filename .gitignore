@@ -10,3 +10,6 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Tom Harte ProcessorTests corpus (Phase 003) — fetched via `go generate ./mos6502/`
+mos6502/testdata/processortests/
